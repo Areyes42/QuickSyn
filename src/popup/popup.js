@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   theme: "dark",            // "dark" | "light" | "system"
   showPosFilters: true,     // show part-of-speech filter tabs
   initialLimit: 10,
+  provider: "datamuse",     // "datamuse" | "freedict"
 };
 
 const $enabled = document.getElementById("toggle-enabled");
@@ -21,6 +22,8 @@ const $themeDark = document.getElementById("theme-dark");
 const $themeLight = document.getElementById("theme-light");
 const $themeSystem = document.getElementById("theme-system");
 const $posFilters = document.getElementById("toggle-pos-filters");
+const $providerDatamuse = document.getElementById("provider-datamuse");
+const $providerFreedict = document.getElementById("provider-freedict");
 
 let settings = { ...DEFAULT_SETTINGS };
 
@@ -63,6 +66,7 @@ function load() {
     }
     if (!settings.popupPosition) settings.popupPosition = "right";
     if (!settings.theme) settings.theme = "dark";
+    if (!settings.provider) settings.provider = "datamuse";
 
     applyPopupTheme();
     render();
@@ -106,6 +110,12 @@ function render() {
     $themeSystem.checked = true;
   } else {
     $themeDark.checked = true;
+  }
+
+  if (settings.provider === "freedict") {
+    $providerFreedict.checked = true;
+  } else {
+    $providerDatamuse.checked = true;
   }
 
   $siteList.innerHTML = "";
@@ -202,6 +212,16 @@ $themeLight.addEventListener("change", () => {
 $themeSystem.addEventListener("change", () => {
   settings.theme = "system";
   applyPopupTheme();
+  save();
+});
+
+$providerDatamuse.addEventListener("change", () => {
+  settings.provider = "datamuse";
+  save();
+});
+
+$providerFreedict.addEventListener("change", () => {
+  settings.provider = "freedict";
   save();
 });
 

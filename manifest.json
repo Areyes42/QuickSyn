@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
   "name": "QuickSyn",
-  "version": "1.0.0",
+  "version": "1.1",
   "description": "Double-click any word in an editable field to see synonym suggestions. Click a synonym to replace the word instantly.",
   "permissions": ["storage", "tabs"],
-  "host_permissions": [],
+  "host_permissions": [
+    "https://api.datamuse.com/*",
+    "https://api.dictionaryapi.dev/*"
+  ],
   "icons": {
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",

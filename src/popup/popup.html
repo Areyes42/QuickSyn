@@ -13,8 +13,8 @@
       <div class="popup-title-row">
         <img src="../../assets/icons/icon48.png" alt="" class="popup-icon" />
         <div>
-          <h1 class="popup-title">Synonym Finder</h1>
-          <p class="popup-subtitle">Double-click a word, or select text &amp; press Ctrl+Shift+S</p>
+          <h1 class="popup-title">QuickSyn</h1>
+          <p class="popup-subtitle">Double-click or highlight text to see synonyms</p>
         </div>
       </div>
     </div>
@@ -52,6 +52,29 @@
       <label class="toggle">
         <input type="checkbox" id="toggle-pos-filters" />
         <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Synonym provider -->
+    <div class="section-title">Synonym provider</div>
+    <p class="section-desc">Choose where synonym data comes from.</p>
+
+    <div class="position-options provider-options">
+      <label class="position-option">
+        <input type="radio" name="provider" value="datamuse" id="provider-datamuse" />
+        <span class="position-card">
+          <span class="position-icon">&#x1F4D6;</span>
+          <span class="position-label">Datamuse</span>
+        </span>
+      </label>
+      <label class="position-option">
+        <input type="radio" name="provider" value="freedict" id="provider-freedict" />
+        <span class="position-card">
+          <span class="position-icon">&#x1F4DA;</span>
+          <span class="position-label">Free Dict</span>
+        </span>
       </label>
     </div>
 

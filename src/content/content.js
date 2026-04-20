@@ -3,7 +3,8 @@
 
   const HOST_ID = "synonym-finder-host";
   const POPUP_ID = "synonym-finder-popup";
-  const API_URL = "https://api.datamuse.com/words";
+  const DATAMUSE_URL = "https://api.datamuse.com/words";
+  const FREEDICT_URL = "https://api.dictionaryapi.dev/api/v2/entries/en";
   const MAX_SYNONYMS = 40;
   const INITIAL_LIMIT = 10;
   const MAX_PHRASE_WORDS = 5;
@@ -15,6 +16,13 @@
     adv: "adv",
   };
 
+  const FREEDICT_POS_MAP = {
+    noun: "noun",
+    verb: "verb",
+    adjective: "adj",
+    adverb: "adv",
+  };
+
   // ── Settings
 
   let extensionEnabled = true;
@@ -23,6 +31,7 @@
   let selectTrigger = false;
   let themeSetting = "dark";
   let showPosFilters = true;
+  let synonymProvider = "datamuse";
 
   function syncSettingsToMainWorld() {
     if (isGoogleDocs()) {
@@ -33,17 +42,22 @@
     }
   }
 
+  function applySettingsFromObject(s) {
+    extensionEnabled = s.enabled !== false;
+    disabledSites = s.disabledSites || [];
+    popupPosition = s.popupPosition || "right";
+    selectTrigger = s.selectTrigger === true;
+    themeSetting = s.theme || "dark";
+    showPosFilters = s.showPosFilters !== false;
+    synonymProvider = s.provider || "datamuse";
+  }
+
   function loadSettings() {
     try {
       chrome.runtime.sendMessage({ type: "GET_SETTINGS" }, (resp) => {
         if (chrome.runtime.lastError) return;
         if (resp) {
-          extensionEnabled = resp.enabled !== false;
-          disabledSites = resp.disabledSites || [];
-          popupPosition = resp.popupPosition || "right";
-          selectTrigger = resp.selectTrigger === true;
-          themeSetting = resp.theme || "dark";
-          showPosFilters = resp.showPosFilters !== false;
+          applySettingsFromObject(resp);
           syncSettingsToMainWorld();
           applyTheme();
         }
@@ -54,13 +68,7 @@
   try {
     chrome.storage.onChanged.addListener((changes) => {
       if (changes.settings) {
-        const s = changes.settings.newValue;
-        extensionEnabled = s.enabled !== false;
-        disabledSites = s.disabledSites || [];
-        popupPosition = s.popupPosition || "right";
-        selectTrigger = s.selectTrigger === true;
-        themeSetting = s.theme || "dark";
-        showPosFilters = s.showPosFilters !== false;
+        applySettingsFromObject(changes.settings.newValue);
         syncSettingsToMainWorld();
         applyTheme();
       }
@@ -694,15 +702,32 @@
     const leftMatch = before.match(/(\w+)\W*$/);
     const rightMatch = after.match(/^\W*(\w+)/);
 
+    const STOP_WORDS = new Set([
+      "the","a","an","is","are","was","were","be","been","being","have","has",
+      "had","do","does","did","will","would","shall","should","may","might",
+      "can","could","must","and","but","or","nor","not","no","so","if","then",
+      "than","that","this","these","those","it","its","i","me","my","we","our",
+      "you","your","he","him","his","she","her","they","them","their","what",
+      "which","who","whom","when","where","how","why","of","in","on","at","to",
+      "for","with","by","from","as","into","about","up","out","off","over",
+      "after","before","between","under","above","very","just","also","too",
+    ]);
+
+    const combinedText = (before + " " + after).toLowerCase();
+    const topicWords = combinedText
+      .split(/[^\w]+/)
+      .filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+    const topicSet = [...new Set(topicWords)].slice(0, 5);
+
     return {
       left: leftMatch ? leftMatch[1].toLowerCase() : "",
       right: rightMatch ? rightMatch[1].toLowerCase() : "",
+      topics: topicSet.join(","),
     };
   }
 
   // ── Synonym / Alternative Fetching
-  // Returns array of { word: string, pos: string[] }
-  // The `md=p` flag requests part-of-speech tags from Datamuse.
+  // All providers return: array of { word: string, pos: string[] }
 
   function parsePOS(tags) {
     if (!tags) return [];
@@ -713,14 +738,17 @@
     return result;
   }
 
-  async function fetchSynonyms(text, leftContext, rightContext) {
+  // ── Datamuse provider
+
+  async function fetchFromDatamuse(text, leftContext, rightContext, topics) {
     text = text.toLowerCase().trim();
     const isPhrase = /\s/.test(text);
     const hasContext = !!(leftContext || rightContext);
 
     if (isPhrase) {
-      const url = `${API_URL}?ml=${encodeURIComponent(text)}&max=${MAX_SYNONYMS}&md=p`;
-      const resp = await fetch(url);
+      const params = new URLSearchParams({ ml: text, max: String(MAX_SYNONYMS), md: "p" });
+      if (topics) params.set("topics", topics);
+      const resp = await fetch(`${DATAMUSE_URL}?${params}`);
       if (!resp.ok) throw new Error(`API error ${resp.status}`);
       const data = await resp.json();
       return data
@@ -729,8 +757,9 @@
     }
 
     if (!hasContext) {
-      const url = `${API_URL}?rel_syn=${encodeURIComponent(text)}&max=${MAX_SYNONYMS}&md=p`;
-      const resp = await fetch(url);
+      const params = new URLSearchParams({ rel_syn: text, max: String(MAX_SYNONYMS), md: "p" });
+      if (topics) params.set("topics", topics);
+      const resp = await fetch(`${DATAMUSE_URL}?${params}`);
       if (!resp.ok) throw new Error(`API error ${resp.status}`);
       const data = await resp.json();
       return data.map((d) => ({ word: d.word, pos: parsePOS(d.tags) }));
@@ -743,12 +772,14 @@
     });
     if (leftContext) ctxParams.set("lc", leftContext);
     if (rightContext) ctxParams.set("rc", rightContext);
+    if (topics) ctxParams.set("topics", topics);
 
-    const baseUrl = `${API_URL}?rel_syn=${encodeURIComponent(text)}&max=${MAX_SYNONYMS}&md=p`;
+    const baseParams = new URLSearchParams({ rel_syn: text, max: String(MAX_SYNONYMS), md: "p" });
+    if (topics) baseParams.set("topics", topics);
 
     const [ctxResp, baseResp] = await Promise.all([
-      fetch(`${API_URL}?${ctxParams}`),
-      fetch(baseUrl),
+      fetch(`${DATAMUSE_URL}?${ctxParams}`),
+      fetch(`${DATAMUSE_URL}?${baseParams}`),
     ]);
 
     const ctxData = ctxResp.ok ? await ctxResp.json() : [];
@@ -773,9 +804,69 @@
     return results.slice(0, MAX_SYNONYMS);
   }
 
+  // ── Free Dictionary API provider
+
+  async function fetchFromFreeDict(text) {
+    text = text.toLowerCase().trim();
+    const url = `${FREEDICT_URL}/${encodeURIComponent(text)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      if (resp.status === 404) return [];
+      throw new Error(`API error ${resp.status}`);
+    }
+    const data = await resp.json();
+    if (!Array.isArray(data)) return [];
+
+    const seen = new Set();
+    const results = [];
+
+    for (const entry of data) {
+      if (!entry.meanings) continue;
+      for (const meaning of entry.meanings) {
+        const pos = FREEDICT_POS_MAP[meaning.partOfSpeech] || "";
+        const posArr = pos ? [pos] : [];
+
+        const meaningLevelSyns = meaning.synonyms || [];
+        for (const syn of meaningLevelSyns) {
+          const w = syn.toLowerCase();
+          if (w !== text && !seen.has(w)) {
+            seen.add(w);
+            results.push({ word: syn, pos: posArr });
+          }
+        }
+
+        if (!meaning.definitions) continue;
+        for (const def of meaning.definitions) {
+          if (!def.synonyms) continue;
+          for (const syn of def.synonyms) {
+            const w = syn.toLowerCase();
+            if (w !== text && !seen.has(w)) {
+              seen.add(w);
+              results.push({ word: syn, pos: posArr });
+            }
+          }
+        }
+      }
+    }
+
+    return results.slice(0, MAX_SYNONYMS);
+  }
+
+  // ── Provider dispatch
+
+  const PROVIDERS = {
+    datamuse: { name: "Datamuse", fetch: fetchFromDatamuse },
+    freedict: { name: "Free Dictionary", fetch: fetchFromFreeDict },
+  };
+
+  async function fetchSynonyms(text, leftContext, rightContext, topics) {
+    const provider = PROVIDERS[synonymProvider] || PROVIDERS.datamuse;
+    return provider.fetch(text, leftContext, rightContext, topics);
+  }
+
   async function fetchMeaningLike(text) {
     text = text.toLowerCase().trim();
-    const url = `${API_URL}?ml=${encodeURIComponent(text)}&max=${MAX_SYNONYMS}&md=p`;
+    const url = `${DATAMUSE_URL}?ml=${encodeURIComponent(text)}&max=${MAX_SYNONYMS}&md=p`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`API error ${resp.status}`);
     const data = await resp.json();
@@ -1026,7 +1117,7 @@
 
       const errMsg = document.createElement("div");
       errMsg.className = "sf-error-msg";
-      errMsg.textContent = "Network error — couldn\u2019t reach the synonym service";
+      errMsg.textContent = opts.errorMessage || "Network error \u2014 couldn\u2019t reach the synonym service";
       errWrap.appendChild(errMsg);
 
       if (opts.onRetry) {
@@ -1269,11 +1360,11 @@
     positionPopup(popup, wordRect);
   }
 
-  function createRetryHandler(word, leftCtx, rightCtx, editableEl, wordRect, baseOpts) {
+  function createRetryHandler(word, leftCtx, rightCtx, topics, editableEl, wordRect, baseOpts) {
     return async function retry() {
       showLoadingPopup(word, wordRect, baseOpts);
       try {
-        const synonyms = await fetchSynonyms(word, leftCtx, rightCtx);
+        const synonyms = await fetchSynonyms(word, leftCtx, rightCtx, topics);
         if (savedRange) {
           const s = window.getSelection();
           s.removeAllRanges();
@@ -1281,7 +1372,7 @@
         }
         showResultPopup(word, synonyms, editableEl, wordRect, {
           ...baseOpts,
-          onRetry: createRetryHandler(word, leftCtx, rightCtx, editableEl, wordRect, baseOpts),
+          onRetry: createRetryHandler(word, leftCtx, rightCtx, topics, editableEl, wordRect, baseOpts),
           onMeaningLike: createMeaningLikeHandler(word, editableEl, wordRect, baseOpts),
         });
       } catch (err) {
@@ -1289,7 +1380,8 @@
         showResultPopup(word, [], editableEl, wordRect, {
           ...baseOpts,
           isError: true,
-          onRetry: createRetryHandler(word, leftCtx, rightCtx, editableEl, wordRect, baseOpts),
+          errorMessage: err.message,
+          onRetry: createRetryHandler(word, leftCtx, rightCtx, topics, editableEl, wordRect, baseOpts),
         });
       }
     };
@@ -1314,6 +1406,7 @@
         showResultPopup(word, [], editableEl, wordRect, {
           ...baseOpts,
           isError: true,
+          errorMessage: err.message,
           onRetry: createMeaningLikeHandler(word, editableEl, wordRect, baseOpts),
         });
       }
@@ -1366,7 +1459,7 @@
     showLoadingPopup(word, wordRect, baseOpts);
 
     try {
-      const synonyms = await fetchSynonyms(word, ctx.left, ctx.right);
+      const synonyms = await fetchSynonyms(word, ctx.left, ctx.right, ctx.topics);
 
       if (savedRange) {
         const s = window.getSelection();
@@ -1376,7 +1469,7 @@
 
       showResultPopup(word, synonyms, savedEditable, savedWordRect, {
         ...baseOpts,
-        onRetry: createRetryHandler(word, ctx.left, ctx.right, savedEditable, savedWordRect, baseOpts),
+        onRetry: createRetryHandler(word, ctx.left, ctx.right, ctx.topics, savedEditable, savedWordRect, baseOpts),
         onMeaningLike: createMeaningLikeHandler(word, savedEditable, savedWordRect, baseOpts),
       });
     } catch (err) {
@@ -1384,7 +1477,8 @@
       showResultPopup(word, [], savedEditable, savedWordRect, {
         ...baseOpts,
         isError: true,
-        onRetry: createRetryHandler(word, ctx.left, ctx.right, savedEditable, savedWordRect, baseOpts),
+        errorMessage: err.message,
+        onRetry: createRetryHandler(word, ctx.left, ctx.right, ctx.topics, savedEditable, savedWordRect, baseOpts),
       });
     }
   }
@@ -1415,7 +1509,7 @@
 
     const isPhrase = /\s/.test(text);
 
-    let ctx = { left: "", right: "" };
+    let ctx = { left: "", right: "", topics: "" };
     let hasContext = false;
     if (!isPhrase) {
       ctx = getSurroundingContext(editableEl);
@@ -1440,7 +1534,7 @@
     showLoadingPopup(text, wordRect, baseOpts);
 
     try {
-      const synonyms = await fetchSynonyms(text, ctx.left, ctx.right);
+      const synonyms = await fetchSynonyms(text, ctx.left, ctx.right, ctx.topics);
 
       if (savedRange) {
         const s = window.getSelection();
@@ -1450,7 +1544,7 @@
 
       showResultPopup(text, synonyms, savedEditable, savedWordRect, {
         ...baseOpts,
-        onRetry: createRetryHandler(text, ctx.left, ctx.right, savedEditable, savedWordRect, baseOpts),
+        onRetry: createRetryHandler(text, ctx.left, ctx.right, ctx.topics, savedEditable, savedWordRect, baseOpts),
         onMeaningLike: !isPhrase ? createMeaningLikeHandler(text, savedEditable, savedWordRect, baseOpts) : undefined,
       });
     } catch (err) {
@@ -1458,7 +1552,8 @@
       showResultPopup(text, [], savedEditable, savedWordRect, {
         ...baseOpts,
         isError: true,
-        onRetry: createRetryHandler(text, ctx.left, ctx.right, savedEditable, savedWordRect, baseOpts),
+        errorMessage: err.message,
+        onRetry: createRetryHandler(text, ctx.left, ctx.right, ctx.topics, savedEditable, savedWordRect, baseOpts),
       });
     }
   }
@@ -1521,7 +1616,7 @@
 
         const isPhrase = /\s/.test(text);
 
-        let ctx = { left: "", right: "" };
+        let ctx = { left: "", right: "", topics: "" };
         let hasContext = false;
         if (!isPhrase) {
           ctx = getSurroundingContext(editableEl);
@@ -1545,7 +1640,7 @@
         showLoadingPopup(text, wordRect, baseOpts);
 
         try {
-          const synonyms = await fetchSynonyms(text, ctx.left, ctx.right);
+          const synonyms = await fetchSynonyms(text, ctx.left, ctx.right, ctx.topics);
 
           if (savedRange) {
             const s = window.getSelection();
@@ -1555,7 +1650,7 @@
 
           showResultPopup(text, synonyms, savedEditable, savedWordRect, {
             ...baseOpts,
-            onRetry: createRetryHandler(text, ctx.left, ctx.right, savedEditable, savedWordRect, baseOpts),
+            onRetry: createRetryHandler(text, ctx.left, ctx.right, ctx.topics, savedEditable, savedWordRect, baseOpts),
             onMeaningLike: !isPhrase ? createMeaningLikeHandler(text, savedEditable, savedWordRect, baseOpts) : undefined,
           });
         } catch (err) {
@@ -1563,7 +1658,8 @@
           showResultPopup(text, [], savedEditable, savedWordRect, {
             ...baseOpts,
             isError: true,
-            onRetry: createRetryHandler(text, ctx.left, ctx.right, savedEditable, savedWordRect, baseOpts),
+            errorMessage: err.message,
+            onRetry: createRetryHandler(text, ctx.left, ctx.right, ctx.topics, savedEditable, savedWordRect, baseOpts),
           });
         }
       }, 400);
@@ -1645,11 +1741,11 @@
     }, GDOCS_LOADING_DELAY_MS);
 
     try {
-      const synonyms = await fetchSynonyms(word, "", "");
+      const synonyms = await fetchSynonyms(word, "", "", "");
       if (requestToken !== gdocsLookupToken) return;
       showResultPopup(word, synonyms, savedEditable, savedWordRect, {
         ...baseOpts,
-        onRetry: createRetryHandler(word, "", "", savedEditable, savedWordRect, baseOpts),
+        onRetry: createRetryHandler(word, "", "", "", savedEditable, savedWordRect, baseOpts),
         onMeaningLike: !isPhrase ? createMeaningLikeHandler(word, savedEditable, savedWordRect, baseOpts) : undefined,
       });
     } catch (err) {
@@ -1658,7 +1754,8 @@
       showResultPopup(word, [], savedEditable, savedWordRect, {
         ...baseOpts,
         isError: true,
-        onRetry: createRetryHandler(word, "", "", savedEditable, savedWordRect, baseOpts),
+        errorMessage: err.message,
+        onRetry: createRetryHandler(word, "", "", "", savedEditable, savedWordRect, baseOpts),
       });
     } finally {
       clearTimeout(loadingTimer);

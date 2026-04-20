@@ -1,8 +1,18 @@
 # QuickSyn
 
-A fast, lightweight synonym finder that helps improve wording anywhere on the web.
+![Version](https://img.shields.io/badge/version-1.1-purple)
+![License](https://img.shields.io/badge/license-GPL-green)
+![Manifest](https://img.shields.io/badge/manifest-v3-blue)
+[![GitHub](https://img.shields.io/badge/GitHub-QuickSyn-black?logo=github)](https://github.com/areyes42/QuickSyn)
 
-A Manifest V3 Chrome extension that suggests context-aware synonyms for words in editable fields, including Google Docs.
+A fast, lightweight synonym finder that helps improve wording anywhere on the web.|
+
+<table>
+  <tr>
+    <td><img src="assets/popup_example2.JPG" height="200" alt="Synonym suggestions" /></td>
+    <td><img src="assets/popup_example.JPG" width="320" alt="Extension popup" /></td>
+  </tr>
+</table>
 
 ## What It Does
 
@@ -28,6 +38,8 @@ Focus on privacy and offline use, so no external API keys, tokens, or analytics 
 
 ## API
 
-Synonyms come from [Datamuse API](https://www.datamuse.com/api/):
+Synonyms come from [Datamuse API](https://www.datamuse.com/api/) and [Free Dictionary API](https://dictionaryapi.dev/):
 
 `GET https://api.datamuse.com/words?rel_syn=WORD&max=40`
+
+`GET https://api.dictionaryapi.dev/api/v2/entries/en/WORD`

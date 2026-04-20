@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   theme: "dark",           // "dark" | "light" | "system"
   showPosFilters: true,    // show part-of-speech filter tabs
   initialLimit: 10,
+  provider: "datamuse",    // "datamuse" | "freedict"
 };
 
 // Initialize default settings on install
@@ -20,6 +21,7 @@ chrome.runtime.onInstalled.addListener(() => {
       }
       if (!s.popupPosition) s.popupPosition = "right";
       if (!s.theme) s.theme = "dark";
+      if (!s.provider) s.provider = "datamuse";
       chrome.storage.sync.set({ settings: s });
     }
   });
