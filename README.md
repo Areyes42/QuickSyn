@@ -1,5 +1,7 @@
 # QuickSyn
 
+A fast, lightweight synonym finder that helps improve wording anywhere on the web.
+
 A Manifest V3 Chrome extension that suggests context-aware synonyms for words in editable fields, including Google Docs.
 
 ## What It Does
