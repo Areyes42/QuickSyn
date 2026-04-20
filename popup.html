@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synonym Finder Settings</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="popup-title-row">
+        <img src="icons/icon48.png" alt="" class="popup-icon" />
+        <div>
+          <h1 class="popup-title">Synonym Finder</h1>
+          <p class="popup-subtitle">Double-click a word, or select text &amp; press Ctrl+Shift+S</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Master toggle -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">Enable extension</span>
+        <span class="setting-desc">Turn synonym popup on or off globally</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-enabled" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <!-- Select trigger toggle -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">Trigger on selection</span>
+        <span class="setting-desc">Auto-show popup when you highlight text</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-select-trigger" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <!-- POS filter toggle -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">Part-of-speech filters</span>
+        <span class="setting-desc">Show noun / verb / adj / adv filter tabs</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-pos-filters" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Theme -->
+    <div class="section-title">Theme</div>
+    <p class="section-desc">Appearance of the extension UI.</p>
+
+    <div class="position-options">
+      <label class="position-option">
+        <input type="radio" name="theme" value="dark" id="theme-dark" />
+        <span class="position-card">
+          <span class="position-icon">&#x1F319;</span>
+          <span class="position-label">Dark</span>
+        </span>
+      </label>
+      <label class="position-option">
+        <input type="radio" name="theme" value="light" id="theme-light" />
+        <span class="position-card">
+          <span class="position-icon">&#x2600;</span>
+          <span class="position-label">Light</span>
+        </span>
+      </label>
+      <label class="position-option">
+        <input type="radio" name="theme" value="system" id="theme-system" />
+        <span class="position-card">
+          <span class="position-icon">&#x1F4BB;</span>
+          <span class="position-label">System</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Popup position -->
+    <div class="section-title">Popup position</div>
+    <p class="section-desc">Where the synonym box appears relative to the word.</p>
+
+    <div class="position-options">
+      <label class="position-option">
+        <input type="radio" name="popup-position" value="right" id="pos-right" />
+        <span class="position-card">
+          <span class="position-icon">&#x2198;</span>
+          <span class="position-label">Bottom-right</span>
+        </span>
+      </label>
+      <label class="position-option">
+        <input type="radio" name="popup-position" value="center" id="pos-center" />
+        <span class="position-card">
+          <span class="position-icon">&#x2193;</span>
+          <span class="position-label">Centered</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Disabled sites -->
+    <div class="section-title">Blocked sites</div>
+    <p class="section-desc">Toggle sites off without removing them.</p>
+
+    <div id="site-list" class="site-list"></div>
+
+    <div class="add-site-row">
+      <input
+        type="text"
+        id="new-site"
+        class="site-input"
+        placeholder="e.g. google.com"
+        spellcheck="false"
+      />
+      <button id="add-site-btn" class="btn-add">Add</button>
+    </div>
+
+    <!-- Quick-add current site -->
+    <button id="add-current-btn" class="btn-current">
+      <span class="btn-current-icon">+</span>
+      Block current site
+    </button>
+
+    <div class="divider"></div>
+
+    <!-- Status bar -->
+    <div class="popup-footer">
+      <span id="status-text" class="status-text"></span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
