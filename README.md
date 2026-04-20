@@ -5,14 +5,12 @@
 ![Manifest](https://img.shields.io/badge/manifest-v3-blue)
 [![GitHub](https://img.shields.io/badge/GitHub-QuickSyn-black?logo=github)](https://github.com/areyes42/QuickSyn)
 
-A fast, lightweight synonym finder that helps improve wording anywhere on the web.|
+A fast, lightweight synonym finder that helps improve wording anywhere on the web.
 
-<table>
-  <tr>
-    <td><img src="assets/popup_example2.JPG" height="200" alt="Synonym suggestions" /></td>
-    <td><img src="assets/popup_example.JPG" width="320" alt="Extension popup" /></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="assets/popup_example2.JPG" height="194" alt="Synonym suggestions" />
+  <img src="assets/popup_example.JPG" width="320" alt="Extension popup" />
+</p>
 
 ## What It Does
 
